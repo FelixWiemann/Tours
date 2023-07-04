@@ -2,6 +2,7 @@ import math
 from typing import List
 import argparse
 from argparse import RawTextHelpFormatter
+import shutil
 # lat / long
 topleft=[47.3616,11.3420]
 # lat / long
@@ -10,6 +11,9 @@ scaling = 1/80500
 cmperdegree = 11113900
 size=[625 , 534]
 margin = 0.005
+shrink = False
+
+from PIL import Image
 
 #     x
 import xml.etree.ElementTree as ET
@@ -121,12 +125,13 @@ def getMapLink(trps:List[trkpnt]):
   # build url for streetmap
   return "https://render.openstreetmap.org/cgi-bin/export?bbox={botleftlong:.14f},{botleftlat:.14f},{toprightlong:.14f},{toprightlat:.14f}&scale={scale}&format=svg".format(botleftlong=minlong, botleftlat=minlat, toprightlong=maxlong, toprightlat=maxlat, scale=round(scale))
 
-def createImageMap(map, pnts, segments, imageFolder):
+def createImageMap(map, pnts, segments, imageFolder, out):
   print("creating picture map")
-  dwg = svgwrite.Drawing('picture.svg', size=(str(size[0])+"pt",str(size[1])+"pt"), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
+  print("shrinking images: ", shrink)
+  dwg = svgwrite.Drawing(os.path.join(out,'picture.svg'), size=(str(size[0])+"pt",str(size[1])+"pt"), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
   dwg.add(map)
   for segment in segments: 
-    dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="0.5",stroke=svgwrite.rgb(10, 10, 10, '%')))
+    dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb(10, 10, 10, '%')))
     contentscript = """
   // shows an image from source
   function show_image(src, width, height, alt, x, y) 
@@ -156,13 +161,19 @@ def createImageMap(map, pnts, segments, imageFolder):
               center=(segment.orig.scaledlon,segment.orig.scaledlat),
               r=5,stroke=svgwrite.rgb(10,10,10,"%"), 
               onclick="show_image(\""+f+"\", 400, 300, 'test image',"+ str(segment.orig.scaledlon)+","+ str(segment.orig.scaledlat)+")"))
+            if (shrink):
+              image = Image.open(os.path.join(root, f))
+              image.thumbnail((400,300))
+              image.save(os.path.join(out, f))
+            else:
+              shutil.copyfile(os.path.join(root, f), os.path.join(out, f))
   except Exception as ex:
     print(ex)
   dwg.save()
 
-def createEleMap(map, pnts, segments):
+def createEleMap(map, pnts, segments, out):
   print("creating elevation map")
-  dwg = svgwrite.Drawing('elevation.svg', size=(str(size[0])+"pt",str(size[1])+"pt"), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
+  dwg = svgwrite.Drawing(os.path.join(out,'elevation.svg'), size=(str(size[0])+"pt",str(size[1])+"pt"), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
   dwg.add(map)
   minele = 100000
   maxele = 0 
@@ -171,12 +182,12 @@ def createEleMap(map, pnts, segments):
       minele = min(minele,segment.avele)
       maxele = max(maxele,segment.avele)
   for segment in segments:
-    dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="0.4",stroke=svgwrite.rgb( min(255,segment.avele*255/(maxele-minele)),max(255-segment.avele*255/(maxele-minele),0), 0, '%')))
+    dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb( min(255,segment.avele*255/(maxele-minele)),max(255-segment.avele*255/(maxele-minele),0), 0, '%')))
   dwg.save()
 
-def createSpeedMap(map, pnts, segments):
+def createSpeedMap(map, pnts, segments, out):
   print("creating speed map")
-  dwg = svgwrite.Drawing('speed.svg', size=(str(size[0])+"pt",str(size[1])+"pt"), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
+  dwg = svgwrite.Drawing(os.path.join(out,'speed.svg'), size=(str(size[0])+"pt",str(size[1])+"pt"), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
   dwg.add(map)
   minspeed = 100000
   maxspeed = 0 
@@ -185,29 +196,34 @@ def createSpeedMap(map, pnts, segments):
       minspeed = min(minspeed,segment.speed)
       maxspeed = max(maxspeed,segment.speed)
   for segment in segments:
-    dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="0.6",stroke=svgwrite.rgb( max(255-segment.speed*255/(maxspeed-minspeed),0),min(255,segment.speed*255/(maxspeed-minspeed)), 0, '%')))
+    dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb( max(255-segment.speed*255/(maxspeed-minspeed),0),min(255,segment.speed*255/(maxspeed-minspeed)), 0, '%')))
   dwg.save()
 
-def createlegMap(map, pnts, segments):
+def createlegMap(map, pnts, segments, out):
   print("creating leg map")
-  dwg = svgwrite.Drawing('legs.svg', size=(str(size[0])+"pt",str(size[1])+"pt"), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
+  dwg = svgwrite.Drawing(os.path.join(out,'legs.svg'), size=(str(size[0])+"pt",str(size[1])+"pt"), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
   dwg.add(map)
   legcount =0
   legcolor = [[0,0,0],[255,0,0],[0,255,0],[0,0,255],[120,120,0],[255,0,255]]
   for segment in segments:
     if (segment.time>3000):
       legcount=legcount+1  
-    dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="1.5",stroke=svgwrite.rgb(legcolor[legcount%6][0],legcolor[legcount%6][1],legcolor[legcount%6][2] , '%')))
+    dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb(legcolor[legcount%6][0],legcolor[legcount%6][1],legcolor[legcount%6][2] , '%')))
   dwg.save()   
   
-def createMaps(gpxData, imageFolder):
+def createMaps(gpxData, imageFolder, out):
+
   pnts, trps = parsetrkpoints(gpxData)
   url = getMapLink(trps)
   # manual intervention neccessary, OSM doesn't like getting it via code
   print("download file and place the resulting file as map.svg in the working dir:")
   print(url)
-  input("press enter once done")
+  # input("press enter once done")
 
+  if not os.path.exists(out):
+    os.makedirs(out)
+  shutil.copyfile("map.svg", os.path.join(out, "map.svg"))
+  shutil.copyfile(gpxData, os.path.join(out, os.path.basename(gpxData)))
   tree = ET.parse("map.svg")
   root = tree.getroot()
   global size
@@ -225,10 +241,30 @@ def createMaps(gpxData, imageFolder):
   # 0 -> 255
       # print (segments[i])
  
-  createImageMap(map, pnts, segments, imageFolder)
-  createEleMap(map, pnts, segments)
-  createSpeedMap(map, pnts, segments)
-  createlegMap(map, pnts, segments)
+  createImageMap(map, pnts, segments, imageFolder, out)
+  createEleMap(map, pnts, segments, out)
+  createSpeedMap(map, pnts, segments, out)
+  createlegMap(map, pnts, segments, out)
+  createReadMe(out)
+
+def createReadMe(out):
+  with open(os.path.join(out,"README.md"),"w") as f:
+    f.write("# Tour " + os.path.basename(args.gpxFile) +"\r\n")
+    f.write("## tour overview\r\n")
+    f.write("![Legs](./legs.svg)\r\n")
+    f.write("## images on track\r\n")
+    f.write("interactive map with the images, click on them to open and click again to close\r\n")
+    f.write("![images](./picture.svg)\r\n")
+    f.write("## elevation view\r\n")
+    f.write("![elevation](./elevation.svg)\r\n")
+    f.write("## speed view\r\n")
+    f.write("![speed](./speed.svg)\r\n")
+
+    f.write("map data taken from openstreetmap:\r\n")
+    f.write("![copyright openstreetmap](https://www.openstreetmap.org/copyright/en) \r\n")
+    #
+
+
 
 # get the timestamp of the filename  
 def getTimestamp(name):
@@ -253,9 +289,9 @@ def getTimestamp(name):
   except:
     print ("could not match date of image name:", name)
 
-def main(gpxFile, imageFolder):
-  createMaps(gpxFile, imageFolder)
-
+def main(gpxFile, imageFolder, out):
+  createMaps(gpxFile, imageFolder, out)
+args=None
 if __name__=="__main__":
   parser = argparse.ArgumentParser(prog="GpxAnalyzer", description="""analyses gpx data and gives a pretty output
   it will generate several map files, e.g.\r
@@ -265,7 +301,14 @@ if __name__=="__main__":
   parser.add_argument("gpxFile", help="gpx file to analyze")
   parser.add_argument("imageFolder", help="folder of the images to include into the map file")
   parser.add_argument("--margin", help="margin to the side of the map from the track [° of latitude/longitude]")
+  parser.add_argument("--shrinkImages", help="shrink the images to use PILs thumbnails instead", action='store_true')
+  parser.add_argument("--out", help="output destination, everything will be copied there")
   args = parser.parse_args()
   if args.margin is not None:
     margin = float(args.margin)
-  main(args.gpxFile, args.imageFolder)
+  shrink = args.shrinkImages
+  out = args.out
+  if out is None:
+    out = "./tours/" + os.path.basename(args.gpxFile)
+    pass
+  main(args.gpxFile, args.imageFolder, out)
