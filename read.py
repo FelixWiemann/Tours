@@ -1,5 +1,7 @@
 import math
 from typing import List
+import argparse
+from argparse import RawTextHelpFormatter
 # lat / long
 topleft=[47.3616,11.3420]
 # lat / long
@@ -7,6 +9,7 @@ botright=[47.1141,11.7904]
 scaling = 1/80500
 cmperdegree = 11113900
 size=[625 , 534]
+margin = 0.01
 
 #     x
 import xml.etree.ElementTree as ET
@@ -104,7 +107,6 @@ def getMapLink(trps:List[trkpnt]):
   scaling=scale
 
   # add a margin
-  margin = 0.01
   minlong = round(minlong,14)-margin
   minlat = round(minlat,14)-margin
   maxlat = round(maxlat,14)+margin
@@ -247,14 +249,19 @@ def getTimestamp(name):
   except:
     print ("could not match date of image name:", name)
 
-def main():
-  import sys
-  if len(sys.argv)!=3:
-    print("usage info:")
-    # TODO usage info
-    print("")
-    return
-  createMaps(sys.argv[1], sys.argv[2])
+def main(gpxFile, imageFolder):
+  createMaps(gpxFile, imageFolder)
 
 if __name__=="__main__":
-  main()
+  parser = argparse.ArgumentParser(prog="GpxAnalyzer", description="""analyses gpx data and gives a pretty output
+  it will generate several map files, e.g.\r
+  legs.svg for the legs that are detected in the gpx file\r
+  picture.svg for an interactive map with the pictures taken on the trip\r
+  elevation.svg for a display of elevation""", epilog="", formatter_class=RawTextHelpFormatter)  
+  parser.add_argument("gpxFile", help="gpx file to analyze")
+  parser.add_argument("imageFolder", help="folder of the images to include into the map file")
+  parser.add_argument("--margin", help="margin to the side of the map from the track [° of latitude/longitude]")
+  args = parser.parse_args()
+  if args.margin is not None:
+    margin = float(args.margin)
+  main(args.gpxFile, args.imageFolder)
