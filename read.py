@@ -9,7 +9,7 @@ botright=[47.1141,11.7904]
 scaling = 1/80500
 cmperdegree = 11113900
 size=[625 , 534]
-margin = 0.01
+margin = 0.005
 
 #     x
 import xml.etree.ElementTree as ET
@@ -25,7 +25,11 @@ class trkpnt:
     self.lon = float(lon)
     self.ele = float(ele)
     self.time = time
-    self.timestamp = datetime.strptime(self.time,'%Y-%m-%dT%H:%M:%SZ')+timedelta(hours=2, minutes=0)
+    # 2023-07-02T07:14:01.154Z
+    try:
+      self.timestamp = datetime.strptime(self.time,'%Y-%m-%dT%H:%M:%SZ')+timedelta(hours=2, minutes=0)
+    except:
+      self.timestamp = datetime.strptime(self.time,'%Y-%m-%dT%H:%M:%S.%fZ')+timedelta(hours=2, minutes=0)
     
   def scale(self):
     self.scaledlon = (self.lon-topleft[1])*(size[1]/(-topleft[1]+botright[1]))
@@ -102,7 +106,7 @@ def getMapLink(trps:List[trkpnt]):
   
   # do scaling based on min/max values
   # TODO better scaling based on size?
-  scale = max((maxlong-minlong)*250000,(maxlat-minlat)*250000)
+  scale = max((maxlong-minlong)*400000,(maxlat-minlat)*400000)
   global scaling, topleft, botright
   scaling=scale
 
@@ -115,7 +119,7 @@ def getMapLink(trps:List[trkpnt]):
   botright=[minlat, maxlong]
   topleft=[maxlat, minlong]
   # build url for streetmap
-  return "https://render.openstreetmap.org/cgi-bin/export?bbox={botleftlong},{botleftlat},{toprightlong},{toprightlat}&scale={scale}&format=svg".format(botleftlong=minlong, botleftlat=minlat, toprightlong=maxlong, toprightlat=maxlat, scale=round(scale))
+  return "https://render.openstreetmap.org/cgi-bin/export?bbox={botleftlong:.14f},{botleftlat:.14f},{toprightlong:.14f},{toprightlat:.14f}&scale={scale}&format=svg".format(botleftlong=minlong, botleftlat=minlat, toprightlong=maxlong, toprightlat=maxlat, scale=round(scale))
 
 def createImageMap(map, pnts, segments, imageFolder):
   print("creating picture map")
@@ -191,7 +195,7 @@ def createlegMap(map, pnts, segments):
   legcount =0
   legcolor = [[0,0,0],[255,0,0],[0,255,0],[0,0,255],[120,120,0],[255,0,255]]
   for segment in segments:
-    if (segment.time>600):
+    if (segment.time>3000):
       legcount=legcount+1  
     dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="1.5",stroke=svgwrite.rgb(legcolor[legcount%6][0],legcolor[legcount%6][1],legcolor[legcount%6][2] , '%')))
   dwg.save()   
@@ -221,9 +225,9 @@ def createMaps(gpxData, imageFolder):
   # 0 -> 255
       # print (segments[i])
  
-  #createImageMap(map, pnts, segments, imageFolder)
-  #createEleMap(map, pnts, segments)
-  #createSpeedMap(map, pnts, segments)
+  createImageMap(map, pnts, segments, imageFolder)
+  createEleMap(map, pnts, segments)
+  createSpeedMap(map, pnts, segments)
   createlegMap(map, pnts, segments)
 
 # get the timestamp of the filename  
