@@ -21,6 +21,9 @@
             padding: 14px 16px;
             transition: 0.3s;
         }
+        .nav{
+            float: right !important; 
+        }
 
         /* Change background color of buttons on hover */
         .tab button:hover {
@@ -49,6 +52,7 @@
         <button class="tablinks" onclick="openMap(event, 'leg')">Legs</button>
         <button class="tablinks" onclick="openMap(event, 'elevation')">Elevation</button>
         <button class="tablinks" onclick="openMap(event, 'speed')">Speed</button>
+        <button class="nav" onclick="navBack(event)">Back</button>
     </div>
     
     <!-- Tab content -->
@@ -68,6 +72,9 @@
     </div>
     
     <script>
+        function navBack(evt){
+            window.location.href = '../../index.html';
+        }
         function openMap(evt, cityName) {
             // Declare all variables
             var i, tabcontent, tablinks;
