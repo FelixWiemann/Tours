@@ -163,9 +163,9 @@ def createImageMap(map, pnts, segments, imageFolder, out):
         if "jpg" in f:
           segment = getSegment(segments, getTimestamp(f))
           if (segment != None):
-            x=segment.orig.scaledlon
-            y=segment.orig.scaledlat
-            imageSize=[400, 300]
+            x=(segment.orig.scaledlon+segment.target.scaledlon)/2
+            y=(segment.orig.scaledlat+segment.target.scaledlat)/2
+            imageSize=[400, 400]
             if x+imageSize[1]>size[1]:
               x = size[1]-imageSize[1]
             if y+imageSize[0]>size[0]:
