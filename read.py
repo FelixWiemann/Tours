@@ -131,7 +131,7 @@ def getMapLink(trps:List[trkpnt]):
   botright=[minlat, maxlong]
   topleft=[maxlat, minlong]
   # build url for streetmap
-  return "https://render.openstreetmap.org/cgi-bin/export?bbox={botleftlong:.15f},{botleftlat:.15f},{toprightlong:.15f},{toprightlat:.15f}&scale={scale}&format=svg".format(botleftlong=minlong, botleftlat=minlat, toprightlong=maxlong, toprightlat=maxlat, scale=round(scale))
+  return "https://render.openstreetmap.org/cgi-bin/export?bbox={botleftlong:.15f},{botleftlat:.15f},{toprightlong:.15f},{toprightlat:.15f}&scale={scale}&format=svg ".format(botleftlong=minlong, botleftlat=minlat, toprightlong=maxlong, toprightlat=maxlat, scale=round(scale))
 
 def createImageMap(map, pnts, segments, imageFolder, out):
   print("creating picture map")
@@ -266,6 +266,10 @@ def createPage(out):
 
 # get the timestamp of the filename  
 def getTimestamp(name):
+  try:
+    return datetime.strptime(name,'%Y%m%d_%H%M%S.jpg')
+  except :
+    pass
   try:
     return datetime.strptime(name,'IMG_%Y%m%d_%H%M%S_%f.jpg')
   except :
