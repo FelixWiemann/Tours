@@ -128,7 +128,7 @@ def getMapLink(trps:List[trkpnt]):
 def createImageMap(map, pnts, segments, imageFolder, out):
   print("creating picture map")
   print("shrinking images: ", shrink)
-  dwg = svgwrite.Drawing(os.path.join(out,'picture.svg'), size=(str(size[0])+"pt",str(size[1])+"pt"), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
+  dwg = svgwrite.Drawing(os.path.join(out,'picture.svg'),  viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
   dwg.add(map)
   for segment in segments: 
     dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb(10, 10, 10, '%')))
@@ -150,17 +150,24 @@ def createImageMap(map, pnts, segments, imageFolder, out):
     svg.append(svgimg);}
   """  
   dwg.add(svgwrite.container.Script(content=contentscript))
-
   try:
     for root, dirs, files in os.walk(imageFolder):
       for f in files:
         if "jpg" in f:
           segment = getSegment(segments, getTimestamp(f))
           if (segment != None):
+            x=segment.orig.scaledlon
+            y=segment.orig.scaledlat
+            imageSize=[400, 300]
+            if x+imageSize[1]>size[1]:
+              x = size[1]-imageSize[1]
+            if y+imageSize[0]>size[0]:
+              y = size[0]-imageSize[0]
+
             dwg.add(svgwrite.shapes.Circle(
               center=(segment.orig.scaledlon,segment.orig.scaledlat),
-              r=5,stroke=svgwrite.rgb(10,10,10,"%"), 
-              onclick="show_image(\""+f+"\", 400, 300, 'test image',"+ str(segment.orig.scaledlon)+","+ str(segment.orig.scaledlat)+")"))
+              r=5,stroke=svgwrite.rgb(10,10,10,"%"),               
+              onclick="show_image(\""+f+"\", "+str(imageSize[0])+", "+str(imageSize[1])+", 'image "+f+"',"+ str(x)+","+ str(y)+")"))
             if (shrink):
               image = Image.open(os.path.join(root, f))
               image.thumbnail((400,300))
@@ -218,7 +225,7 @@ def createMaps(gpxData, imageFolder, out):
   # manual intervention neccessary, OSM doesn't like getting it via code
   print("download file and place the resulting file as map.svg in the working dir:")
   print(url)
-  # input("press enter once done")
+  input("press enter once done")
 
   if not os.path.exists(out):
     os.makedirs(out)
