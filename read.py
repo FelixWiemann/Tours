@@ -130,8 +130,6 @@ def getMapLink(trps:List[trkpnt]):
   # update for selfscaling of trackpoints
   botright=[minlat, maxlong]
   topleft=[maxlat, minlong]
-  # https://render.openstreetmap.org/cgi-bin/export?bbox=7.668800354003907,50.03016615456372,7.792396545410157,50.17140104179651&scale=120000&format=svg
-  # https://render.openstreetmap.org/cgi-bin/export?bbox=7.799721000000000,49.973845999999995,7.955310000000000,50.052253000000000&scale=58236&format=svg
   # build url for streetmap
   return "https://render.openstreetmap.org/cgi-bin/export?bbox={botleftlong:.15f},{botleftlat:.15f},{toprightlong:.15f},{toprightlat:.15f}&scale={scale}&format=svg".format(botleftlong=minlong, botleftlat=minlat, toprightlong=maxlong, toprightlat=maxlat, scale=round(scale))
 
@@ -139,7 +137,6 @@ def createImageMap(map, pnts, segments, imageFolder, out):
   print("creating picture map")
   print("shrinking images: ", shrink)
   dwg = svgwrite.Drawing(os.path.join(out,'picture.svg'),  viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
-  dwg.add(map)
   for segment in segments: 
     dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb(10, 10, 10, '%')))
     contentscript = """
@@ -191,7 +188,6 @@ def createImageMap(map, pnts, segments, imageFolder, out):
 def createEleMap(map, pnts, segments, out):
   print("creating elevation map")
   dwg = svgwrite.Drawing(os.path.join(out,'elevation.svg'), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
-  dwg.add(map)
   minele = 100000
   maxele = 0 
   for segment in segments:
@@ -205,7 +201,6 @@ def createEleMap(map, pnts, segments, out):
 def createSpeedMap(map, pnts, segments, out):
   print("creating speed map")
   dwg = svgwrite.Drawing(os.path.join(out,'speed.svg'), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
-  dwg.add(map)
   minspeed = 100000
   maxspeed = 0 
   for segment in segments:
@@ -219,7 +214,6 @@ def createSpeedMap(map, pnts, segments, out):
 def createlegMap(map, pnts, segments, out):
   print("creating leg map")
   dwg = svgwrite.Drawing(os.path.join(out,'legs.svg'), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
-  dwg.add(map)
   legcount =0
   legcolor = [[0,0,0],[255,0,0],[0,255,0],[0,0,255],[120,120,0],[255,0,255]]
   for segment in segments:
