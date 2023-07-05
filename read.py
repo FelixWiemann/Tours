@@ -5,13 +5,16 @@ from argparse import RawTextHelpFormatter
 import shutil
 # lat / long
 topleft=[47.3616,11.3420]
-# lat / long
 botright=[47.1141,11.7904]
 scaling = 1/80500
 cmperdegree = 11113900
 size=[625 , 534]
+# margin of the map around the tour
 margin = 0.005
+# whether to shrink the images
 shrink = False
+# name of the tour from gpx file
+tourname = ""
 
 from PIL import Image
 
@@ -67,6 +70,11 @@ class Segment:
   def __repr__(self):
     return "speed: "+str(self.speed)
   
+def getTrackName(gpxData):
+  ns = {"":"http://www.topografix.com/GPX/1/1"}
+  tree = ET.parse(gpxData)
+  root = tree.getroot()
+  return root.find("trk", namespaces=ns).find("name", namespaces=ns).text
 
 ##
 # parse track points
@@ -122,8 +130,10 @@ def getMapLink(trps:List[trkpnt]):
   # update for selfscaling of trackpoints
   botright=[minlat, maxlong]
   topleft=[maxlat, minlong]
+  # https://render.openstreetmap.org/cgi-bin/export?bbox=7.668800354003907,50.03016615456372,7.792396545410157,50.17140104179651&scale=120000&format=svg
+  # https://render.openstreetmap.org/cgi-bin/export?bbox=7.799721000000000,49.973845999999995,7.955310000000000,50.052253000000000&scale=58236&format=svg
   # build url for streetmap
-  return "https://render.openstreetmap.org/cgi-bin/export?bbox={botleftlong:.14f},{botleftlat:.14f},{toprightlong:.14f},{toprightlat:.14f}&scale={scale}&format=svg".format(botleftlong=minlong, botleftlat=minlat, toprightlong=maxlong, toprightlat=maxlat, scale=round(scale))
+  return "https://render.openstreetmap.org/cgi-bin/export?bbox={botleftlong:.15f},{botleftlat:.15f},{toprightlong:.15f},{toprightlat:.15f}&scale={scale}&format=svg".format(botleftlong=minlong, botleftlat=minlat, toprightlong=maxlong, toprightlat=maxlat, scale=round(scale))
 
 def createImageMap(map, pnts, segments, imageFolder, out):
   print("creating picture map")
@@ -180,7 +190,7 @@ def createImageMap(map, pnts, segments, imageFolder, out):
 
 def createEleMap(map, pnts, segments, out):
   print("creating elevation map")
-  dwg = svgwrite.Drawing(os.path.join(out,'elevation.svg'), size=(str(size[0])+"pt",str(size[1])+"pt"), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
+  dwg = svgwrite.Drawing(os.path.join(out,'elevation.svg'), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
   dwg.add(map)
   minele = 100000
   maxele = 0 
@@ -194,7 +204,7 @@ def createEleMap(map, pnts, segments, out):
 
 def createSpeedMap(map, pnts, segments, out):
   print("creating speed map")
-  dwg = svgwrite.Drawing(os.path.join(out,'speed.svg'), size=(str(size[0])+"pt",str(size[1])+"pt"), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
+  dwg = svgwrite.Drawing(os.path.join(out,'speed.svg'), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
   dwg.add(map)
   minspeed = 100000
   maxspeed = 0 
@@ -208,7 +218,7 @@ def createSpeedMap(map, pnts, segments, out):
 
 def createlegMap(map, pnts, segments, out):
   print("creating leg map")
-  dwg = svgwrite.Drawing(os.path.join(out,'legs.svg'), size=(str(size[0])+"pt",str(size[1])+"pt"), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
+  dwg = svgwrite.Drawing(os.path.join(out,'legs.svg'), viewBox=('0 0 {y} {x}'.format(x=size[0], y=size[1])))
   dwg.add(map)
   legcount =0
   legcolor = [[0,0,0],[255,0,0],[0,255,0],[0,0,255],[120,120,0],[255,0,255]]
@@ -225,6 +235,7 @@ def createMaps(gpxData, imageFolder, out):
   # manual intervention neccessary, OSM doesn't like getting it via code
   print("download file and place the resulting file as map.svg in the working dir:")
   print(url)
+  print("you might need to download any map manually first for openstreetmap to accept the link")
   input("press enter once done")
 
   if not os.path.exists(out):
@@ -243,34 +254,20 @@ def createMaps(gpxData, imageFolder, out):
   segments=[]
   for i in range (0, len(trps)-1):
     segments.append(Segment(trps[i],trps[i+1]))
-  
-  # 255 min -> 0 max
-  # 0 -> 255
-      # print (segments[i])
  
   createImageMap(map, pnts, segments, imageFolder, out)
   createEleMap(map, pnts, segments, out)
   createSpeedMap(map, pnts, segments, out)
   createlegMap(map, pnts, segments, out)
-  createReadMe(out)
+  createPage(out)
 
-def createReadMe(out):
-  with open(os.path.join(out,"README.md"),"w") as f:
-    f.write("# Tour " + os.path.basename(args.gpxFile) +"\r\n")
-    f.write("## tour overview\r\n")
-    f.write("![Legs](./legs.svg)\r\n")
-    f.write("## images on track\r\n")
-    f.write("interactive map with the images, click on them to open and click again to close\r\n")
-    f.write("![images](./picture.svg)\r\n")
-    f.write("## elevation view\r\n")
-    f.write("![elevation](./elevation.svg)\r\n")
-    f.write("## speed view\r\n")
-    f.write("![speed](./speed.svg)\r\n")
-
-    f.write("map data taken from openstreetmap:\r\n")
-    f.write("![copyright openstreetmap](https://www.openstreetmap.org/copyright/en) \r\n")
-    #
-
+def createPage(out):
+  lines = open("template.html","r").readlines()
+  newLines = []
+  for line in lines:
+    line = line.replace("{{TOURTITLE}}",tourname)
+    newLines.append(line)
+  open(os.path.join(out,"index.html"),"w").writelines(newLines)
 
 
 # get the timestamp of the filename  
@@ -316,6 +313,7 @@ if __name__=="__main__":
   shrink = args.shrinkImages
   out = args.out
   if out is None:
-    out = "./tours/" + os.path.basename(args.gpxFile)
+    tourname = getTrackName(args.gpxFile)
+    out = "./tours/" + tourname
     pass
   main(args.gpxFile, args.imageFolder, out)
