@@ -8,6 +8,14 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 import svgwrite
 import os
+import json
+
+class Config:
+  def __init__(self, margin:float, shrink:bool) -> None:
+    ## margin to side of map
+    self.Margin = margin
+    ## whether to shrink images
+    self.Shrink = shrink
 
 ##
 # track point class representing a track point of the gpx data
@@ -124,10 +132,10 @@ class MapCreator:
     self.scaling=scale
 
     # add a margin
-    minlong = round(minlong,14)-margin
-    minlat = round(minlat,14)-margin
-    maxlat = round(maxlat,14)+margin
-    maxlong = round(maxlong,14)+margin
+    minlong = round(minlong,14)-self.margin
+    minlat = round(minlat,14)-self.margin
+    maxlat = round(maxlat,14)+self.margin
+    maxlong = round(maxlong,14)+self.margin
     # update for selfscaling of trackpoints
     self.botright=[minlat, maxlong]
     self.topleft=[maxlat, minlong]
@@ -136,7 +144,7 @@ class MapCreator:
 
   def createImageMap(self, map, pnts, segments, imageFolder, out):
     print("creating picture map")
-    print("shrinking images: ", shrink)
+    print("shrinking images: ", self.shrink)
     dwg = svgwrite.Drawing(os.path.join(out,'picture.svg'),  viewBox=('0 0 {y} {x}'.format(x=self.size[0], y=self.size[1])))
     for segment in segments: 
       dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb(10, 10, 10, '%')))
@@ -176,12 +184,13 @@ class MapCreator:
                 center=(segment.orig.scaledlon,segment.orig.scaledlat),
                 r=5,stroke=svgwrite.rgb(10,10,10,"%"),               
                 onclick="show_image(\""+f+"\", "+str(imageSize[0])+", "+str(imageSize[1])+", 'image "+f+"',"+ str(x)+","+ str(y)+")"))
-              if (shrink):
+              if (not self.recreate and self.shrink):
                 image = Image.open(os.path.join(root, f))
                 image.thumbnail((400,300))
                 image.save(os.path.join(out, f))
               else:
-                shutil.copyfile(os.path.join(root, f), os.path.join(out, f))
+                if not self.recreate:
+                  shutil.copyfile(os.path.join(root, f), os.path.join(out, f))
     except Exception as ex:
       print(ex)
     dwg.save()
@@ -223,21 +232,25 @@ class MapCreator:
       dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb(legcolor[legcount%6][0],legcolor[legcount%6][1],legcolor[legcount%6][2] , '%')))
     dwg.save()   
     
-  def createMaps(self, gpxData, imageFolder, out):
+  def createMaps(self, gpxData, imageFolder, out, cfg:Config):
 
     pnts, trps = self.parsetrkpoints(gpxData)
     url = self.getMapLink(trps)
+    targetMap = os.path.join(out, "map.svg")
     # manual intervention neccessary, OSM doesn't like getting it via code
-    print("download file and place the resulting file as map.svg in the working dir:")
-    print(url)
-    print("you might need to download any map manually first for openstreetmap to accept the link")
-    input("press enter once done")
+    if not self.recreate:
+      print("download file and place the resulting file as map.svg in the working dir:")
+      print(url)
+      print("you might need to download any map manually first for openstreetmap to accept the link")
+      input("press enter once done")
 
-    if not os.path.exists(out):
-      os.makedirs(out)
-    shutil.copyfile("map.svg", os.path.join(out, "map.svg"))
-    shutil.copyfile(gpxData, os.path.join(out, os.path.basename(gpxData)))
-    tree = ET.parse("map.svg")
+      if not os.path.exists(out):
+        os.makedirs(out)
+      shutil.copyfile("map.svg", targetMap)
+      shutil.copyfile(gpxData, os.path.join(out, os.path.basename(gpxData)))
+      with open(os.path.join(out, "cfg.json"),"w") as f:
+          f.write(json.dumps(cfg.__dict__))
+    tree = ET.parse(targetMap)
     root = tree.getroot()
     self.size = [int(root.get("height").replace("pt","")), int(root.get("width").replace("pt",""))]
     print ("map size: ", self.size)
@@ -249,11 +262,11 @@ class MapCreator:
     for i in range (0, len(trps)-1):
       segments.append(Segment(trps[i],trps[i+1]))
   
+    self.createPage(out)
     self.createImageMap(map, pnts, segments, imageFolder, out)
     self.createEleMap(map, pnts, segments, out)
     self.createSpeedMap(map, pnts, segments, out)
     self.createlegMap(map, pnts, segments, out)
-    self.createPage(out)
 
   def createPage(self, out):
     lines = open("template.html","r").readlines()
@@ -291,13 +304,37 @@ class MapCreator:
     except:
       print ("could not match date of image name:", name)
 
-  def main(self, gpxFile, imageFolder, out, margin, shrink):
+  def main(self, gpxFile, imageFolder, out, cfg:Config, recreate=False):
     self.tourname = self.getTrackName(gpxFile)
     if out is None:
       out = "./tours/" + self.tourname
-    self.margin = margin
-    self.shrink = shrink
-    self.createMaps(gpxFile, imageFolder, out)
+    self.margin = cfg.Margin
+    self.shrink = cfg.Shrink
+    self.recreate = recreate
+    self.createMaps(gpxFile, imageFolder, out, cfg)
+
+def recreateExistingProjects(toursDir):
+  for root, dirs, _ in os.walk(toursDir):
+    if root == toursDir:
+      for dir in dirs:
+        print("recreating tour " + dir)
+        gpxFile = ""
+        cfgFile = ""
+        projDir = os.path.join(root, dir)
+        for r, _, files  in os.walk(projDir):
+          for file in files:
+            if file.lower().endswith("gpx"):
+              gpxFile = os.path.join(projDir, file) 
+            if file.lower()=="cfg.json":
+              cfgFile = os.path.join(projDir, file) 
+        mc = MapCreator()
+        # create cfg with defaults
+        cfg = Config(0.005, True)
+        with open(cfgFile, "r") as f:
+          s = f.read()
+          # override saved config
+          cfg.__dict__ = json.loads(s)
+        mc.main(gpxFile, projDir, projDir, cfg, recreate=True)
 
 if __name__=="__main__":
   parser = argparse.ArgumentParser(prog="GpxAnalyzer", description="""analyses gpx data and gives a pretty output
@@ -305,16 +342,17 @@ if __name__=="__main__":
   legs.svg for the legs that are detected in the gpx file\r
   picture.svg for an interactive map with the pictures taken on the trip\r
   elevation.svg for a display of elevation""", epilog="", formatter_class=RawTextHelpFormatter)  
-  parser.add_argument("gpxFile", help="gpx file to analyze")
-  parser.add_argument("imageFolder", help="folder of the images to include into the map file")
+  parser.add_argument("--gpxFile", help="gpx file to analyze, if provided requies image folder parameter; if not provided will regenerate existing tracks")
+  parser.add_argument("--imageFolder", help="folder of the images to include into the map file")
   parser.add_argument("--margin", help="margin to the side of the map from the track [° of latitude/longitude]", default=0.005, type=float)
   parser.add_argument("--shrinkImages", help="shrink the images to use PILs thumbnails instead", action='store_true')
   parser.add_argument("--out", help="output destination, everything will be copied there")
   args = parser.parse_args()
-  margin = args.margin
-  shrink = args.shrinkImages
-  out = args.out
-
-  mc = MapCreator()
-  mc.main(args.gpxFile, args.imageFolder, out, margin, shrink)
+  if args.gpxFile is not None:
+    cfg = Config(args.margin, args.shrinkImages)
+    out = args.out
+    mc = MapCreator()
+    mc.main(args.gpxFile, args.imageFolder, out, cfg)
+  else:
+    recreateExistingProjects("./tours")
   
