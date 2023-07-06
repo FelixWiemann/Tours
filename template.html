@@ -9,6 +9,7 @@
             overflow: hidden;
             border: 1px solid #ccc;
             background-color: #f1f1f1;
+            max-width: 1500px;
         }
 
         /* Style the buttons that are used to open the tab content */
@@ -45,6 +46,11 @@
             background-size: contain;
             background-origin: content-box;
             background-repeat: no-repeat;
+            max-width: 1476px;
+        }
+        .createdwith{
+            float: right;
+            font-size: 9px;
         }
     </style>
 </head>
@@ -60,17 +66,21 @@
     <!-- Tab content -->
     <div id="picture" class="tabcontent">
         <embed src="./picture.svg"/>
+        <p class="createdwith">Maps created with <a href="https://www.openstreetmap.org">OpenStreetMap</a></p>
     </div>
     
     <div id="leg" class="tabcontent">
         <embed src="./legs.svg"/>
+        <p class="createdwith">Maps created with <a href="https://www.openstreetmap.org">OpenStreetMap</a></p>
     </div>
     
     <div id="elevation" class="tabcontent">
         <embed src="./elevation.svg"/>
+        <p class="createdwith">Maps created with <a href="https://www.openstreetmap.org">OpenStreetMap</a></p>
     </div>
     <div id="speed" class="tabcontent">
         <embed src="./speed.svg"/>
+        <p class="createdwith">Maps created with <a href="https://www.openstreetmap.org">OpenStreetMap</a></p>
     </div>
     
     <script>
