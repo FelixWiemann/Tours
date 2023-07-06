@@ -110,6 +110,7 @@ class MapCreator:
   ##
   # get a segment from the list of segments based on the timestamp  
   def getSegment(self, segments, timestamp):
+    # TODO segments are sorted by time -> binary search? 
     if (timestamp==None):
       return None
     for segment in segments:
@@ -208,9 +209,11 @@ class MapCreator:
         minele = min(minele,segment.avele)
         maxele = max(maxele,segment.avele)
     for segment in segments:
+      # TODO more complex color scheme? -> new func getColorFor
       dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb( min(255,(segment.avele-minele)*255/(maxele-minele)),max(255-(segment.avele-minele)*255/(maxele-minele),0), 0, '%')))
     i =0
     for x in range(int(minele), int(maxele), int((maxele-minele)/5)):
+      # TODO use getColorFor
       dwg.add(dwg.line((5,10+i*20),(20,10+i*20),stroke_width="3",stroke=svgwrite.rgb( min(255,(x-minele)*255/(maxele-minele)),max(255-(x-minele)*255/(maxele-minele),0), 0, '%')))
       dwg.add(dwg.text(f"{x} m",insert=(25, 14+i*20)))
       i=i+1
@@ -226,9 +229,11 @@ class MapCreator:
         minspeed = min(minspeed,segment.speed)
         maxspeed = max(maxspeed,segment.speed)
     for segment in segments:
+      # TODO more complex color scheme? -> new func getColorFor
       dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb( max(255-segment.speed*255/(maxspeed-minspeed),0),min(255,segment.speed*255/(maxspeed-minspeed)), 0, '%')))
     i=0
     for x in range(int(minspeed), int(maxspeed), int((maxspeed-minspeed)/5)):
+      # TODO use getColorFor
       dwg.add(dwg.line((5,10+i*20),(20,10+i*20),stroke_width="3",stroke=svgwrite.rgb( max(255-x*255/(maxspeed-minspeed),0),min(255,x*255/(maxspeed-minspeed)), 0, '%')))
       dwg.add(dwg.text(f"{x} cm/s",insert=(25, 14+i*20)))
       i=i+1
