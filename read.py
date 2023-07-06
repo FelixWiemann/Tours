@@ -33,6 +33,7 @@ class trkpnt:
       self.timestamp = datetime.strptime(self.time,'%Y-%m-%dT%H:%M:%SZ')+timedelta(hours=2, minutes=0)
     except:
       self.timestamp = datetime.strptime(self.time,'%Y-%m-%dT%H:%M:%S.%fZ')+timedelta(hours=2, minutes=0)
+    self.date = self.time.split("T")[0]
     
   def scale(self, topleft, botright, size):
     self.scaledlon = (self.lon-topleft[1])*(size[1]/(-topleft[1]+botright[1]))
@@ -56,12 +57,14 @@ class wypnt(trkpnt):
 ##
 # track segment defined by origin track point and target track point    
 class Segment:
-  def __init__(self, origin, target):
+  def __init__(self, origin:trkpnt, target:trkpnt):
     self.orig=origin
     self.target=target
-    self.distance=math.sqrt((origin.scaledlon-target.scaledlon)**2+(origin.scaledlat-target.scaledlat)**2)
+    # dist in cm
+    self.distance=math.sqrt((origin.lon-target.lon)**2+(origin.lat-target.lat)**2)/2*11113900
     self.time = (target.timestamp-origin.timestamp).total_seconds()
-    self.speed= self.distance/self.time
+    # speed cm/s
+    self.speed = self.distance/self.time
     self.avele = (origin.ele+target.ele)*0.5
   def __repr__(self):
     return "speed: "+str(self.speed)
@@ -205,7 +208,12 @@ class MapCreator:
         minele = min(minele,segment.avele)
         maxele = max(maxele,segment.avele)
     for segment in segments:
-      dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb( min(255,segment.avele*255/(maxele-minele)),max(255-segment.avele*255/(maxele-minele),0), 0, '%')))
+      dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb( min(255,(segment.avele-minele)*255/(maxele-minele)),max(255-(segment.avele-minele)*255/(maxele-minele),0), 0, '%')))
+    i =0
+    for x in range(int(minele), int(maxele), int((maxele-minele)/5)):
+      dwg.add(dwg.line((5,10+i*20),(20,10+i*20),stroke_width="3",stroke=svgwrite.rgb( min(255,(x-minele)*255/(maxele-minele)),max(255-(x-minele)*255/(maxele-minele),0), 0, '%')))
+      dwg.add(dwg.text(f"{x} m",insert=(25, 14+i*20)))
+      i=i+1
     dwg.save()
 
   def createSpeedMap(self, map, pnts, segments, out):
@@ -214,22 +222,34 @@ class MapCreator:
     minspeed = 100000
     maxspeed = 0 
     for segment in segments:
-      if (segment.speed<0.15):
+      if segment.speed<200:
         minspeed = min(minspeed,segment.speed)
         maxspeed = max(maxspeed,segment.speed)
     for segment in segments:
       dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb( max(255-segment.speed*255/(maxspeed-minspeed),0),min(255,segment.speed*255/(maxspeed-minspeed)), 0, '%')))
+    i=0
+    for x in range(int(minspeed), int(maxspeed), int((maxspeed-minspeed)/5)):
+      dwg.add(dwg.line((5,10+i*20),(20,10+i*20),stroke_width="3",stroke=svgwrite.rgb( max(255-x*255/(maxspeed-minspeed),0),min(255,x*255/(maxspeed-minspeed)), 0, '%')))
+      dwg.add(dwg.text(f"{x} cm/s",insert=(25, 14+i*20)))
+      i=i+1
     dwg.save()
 
-  def createlegMap(self, map, pnts, segments, out):
+  def createlegMap(self, map, pnts:List[trkpnt], segments:List[Segment], out):
     print("creating leg map")
     dwg = svgwrite.Drawing(os.path.join(out,'legs.svg'), viewBox=('0 0 {y} {x}'.format(x=self.size[0], y=self.size[1])))
-    legcount =0
+    legcount = 0
     legcolor = [[0,0,0],[255,0,0],[0,255,0],[0,0,255],[120,120,0],[255,0,255]]
+    legdates=[]
+    legdates.append(segments[0].orig.date)
     for segment in segments:
       if (segment.time>3000):
-        legcount=legcount+1  
+        legcount=legcount+1
+        if not segment.target.date in legdates:
+          legdates.append(segment.target.date)
       dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb(legcolor[legcount%6][0],legcolor[legcount%6][1],legcolor[legcount%6][2] , '%')))
+    for i in range (0, legcount+1):
+      dwg.add(dwg.line((5,10+i*20),(20,10+i*20),stroke_width="3",stroke=svgwrite.rgb(legcolor[i%6][0],legcolor[i%6][1],legcolor[i%6][2] , '%')))
+      dwg.add(dwg.text(f"{legdates[i]}",insert=(25, 14+i*20)))
     dwg.save()   
     
   def createMaps(self, gpxData, imageFolder, out, cfg:Config):
