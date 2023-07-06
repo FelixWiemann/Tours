@@ -149,6 +149,7 @@ class MapCreator:
   def createImageMap(self, map, pnts:List[trkpnt], segments:List[Segment], imageFolder, out):
     print("creating picture map")
     print("shrinking images: ", self.shrink)
+    self.buffer = []
     dwg = svgwrite.Drawing(os.path.join(out,'picture.svg'),  viewBox=('0 0 {y} {x}'.format(x=self.size[0], y=self.size[1])))
     for segment in segments: 
       dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb(10, 10, 10, '%')))
@@ -191,18 +192,7 @@ class MapCreator:
           if "jpg" in f:
             segment = self.getSegment(segments, self.getTimestamp(f))
             if (segment != None):
-              x=(segment.orig.scaledlon+segment.target.scaledlon)/2
-              y=(segment.orig.scaledlat+segment.target.scaledlat)/2
-              imageSize=[400, 400]
-              if x+imageSize[1]>self.size[1]:
-                x = self.size[1]-imageSize[1]
-              if y+imageSize[0]>self.size[0]:
-                y = self.size[0]-imageSize[0]
-
-              dwg.add(svgwrite.shapes.Circle(
-                center=(segment.orig.scaledlon,segment.orig.scaledlat),
-                r=5,stroke=svgwrite.rgb(10,10,10,"%"),               
-                onclick="show_image(\""+f+"\", "+str(imageSize[0])+", "+str(imageSize[1])+", 'image "+f+"',"+ str(x)+","+ str(y)+")"))
+              self.addImageCircleToBuffer( dwg, segment, f)
               if (not self.recreate and self.shrink):
                 image = Image.open(os.path.join(root, f))
                 image.thumbnail((400,300))
@@ -212,8 +202,64 @@ class MapCreator:
                   shutil.copyfile(os.path.join(root, f), os.path.join(out, f))
     except Exception as ex:
       print(ex)
+    self.addBufferedImageCircles(dwg)
     dwg.save()
 
+  def addImageCircleToBuffer(self, dwg, segment:Segment, f:str):
+    center=((segment.orig.scaledlon+segment.target.scaledlon)/2,(segment.orig.scaledlat+segment.target.scaledlat)/2)
+    self.buffer.append([segment, f, center, center])
+    dwg.add(svgwrite.shapes.Circle(
+        center=center,
+        fill="red",   
+        r=2,stroke=svgwrite.rgb(255,10,10,"%")))
+    
+  def addBufferedImageCircles(self, dwg:svgwrite.Drawing):
+    collissionFree = False
+    R=5
+    counter = 0
+    while not collissionFree:
+      centers=[]
+      collissionFree=True
+      for idx, buf in enumerate(self.buffer):
+        segment, f, center, orig = buf
+        cnt=0
+        for c, id,i  in centers:
+          # distance between points
+          d = math.sqrt(((c[0]-center[0])**2+(c[1]-center[1])**2))
+          if d<=7 and d>0:
+            x = center[0]-(c[0]-center[0])/d*10
+            y = center[1]-(c[1]-center[1])/d*10
+            self.buffer[idx][2]=(x, y)
+            x = c[0]+(c[0]-center[0])/d*10
+            y = c[1]+(c[1]-center[1])/d*10
+            self.buffer[id][2]=(x, y)
+            centers[i][0]=(x,y)
+            collissionFree=False
+        centers.append([center, idx, cnt])
+        cnt =cnt +1
+      counter = counter +1
+      if counter > 100:
+        collissionFree = True
+
+    for idx, buf in enumerate(self.buffer):
+      segment, f, center, orig = buf
+      dwg.add(dwg.line((orig[0],orig[1]),(center[0],center[1]),stroke_width="1",stroke=svgwrite.rgb(10, 10, 10, '%')))
+      dwg.add(svgwrite.shapes.Circle(
+          center=center,
+          r=R,stroke=svgwrite.rgb(10,10,10,"%"),            
+          onclick=self.getShowImageCall(f, segment)))
+
+
+  def getShowImageCall(self, f, segment:Segment):
+    x=(segment.orig.scaledlon+segment.target.scaledlon)/2
+    y=(segment.orig.scaledlat+segment.target.scaledlat)/2
+    imageSize=[400, 400]
+    if x+imageSize[1]>self.size[1]:
+      x = self.size[1]-imageSize[1]
+    if y+imageSize[0]>self.size[0]:
+      y = self.size[0]-imageSize[0]
+    return "show_image(\""+f+"\", "+str(imageSize[0])+", "+str(imageSize[1])+", 'image "+f+"',"+ str(x)+","+ str(y)+")"
+  
   def createEleMap(self, map, pnts:List[trkpnt], segments:List[Segment], out):
     print("creating elevation map")
     dwg = svgwrite.Drawing(os.path.join(out,'elevation.svg'), viewBox=('0 0 {y} {x}'.format(x=self.size[0], y=self.size[1])))
@@ -253,7 +299,7 @@ class MapCreator:
     i=0
     for x in range(int(minspeed), int(maxspeed), int((maxspeed-minspeed)/5)):
       dwg.add(dwg.line((5,10+i*20),(20,10+i*20),stroke_width="3",stroke=self.getColorForSpeed(x, minspeed, maxspeed)))
-      dwg.add(dwg.text(f"{x} cm/s",insert=(25, 14+i*20)))
+      dwg.add(dwg.text(f"{x/100} m/s",insert=(25, 14+i*20)))
       i=i+1
     dwg.save()
 
