@@ -3,16 +3,29 @@
   // shows an image from source
   function show_image(src, width, height, alt, x, y) 
   {
+    if (window._shownImages.has(src)){
+      console.log(src  + " alread open");
+      return;
+    }
     var svg = document.getElementsByTagName("svg")[0];
     var svgimg = document.createElementNS("http://www.w3.org/2000/svg","image"); 
     svgimg.setAttributeNS(null,"height",height); 
     svgimg.onclick=function(){
       svg.getElementById(src).remove(svgimg)
+      window._shownImages.delete(src)
+      console.log("closing " + src);
     }; 
     svgimg.setAttributeNS(null,"id",src), svgimg.setAttributeNS(null,"width",width);
     svgimg.setAttributeNS("http://www.w3.org/1999/xlink","href", src);
     svgimg.setAttributeNS(null,"x",x);
     svgimg.setAttributeNS(null,"y",y);
     svgimg.setAttributeNS(null, "visibility", "visible");
-    svg.append(svgimg);}
-  ]]></script><circle cx="230.47031584468982" cy="1074.5768512175307" onclick="show_image(&quot;20230625_140500.jpg&quot;, 400, 400, 'image 20230625_140500.jpg',230.44786160504913,1074.5437036807145)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="593.2410117513002" cy="515.9745593823143" onclick="show_image(&quot;PXL_20230625_100758531.jpg&quot;, 400, 400, 'image PXL_20230625_100758531.jpg',593.7574592634352,515.8751167716305)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="594.857717006707" cy="513.7205268731669" onclick="show_image(&quot;PXL_20230625_101012788.jpg&quot;, 400, 400, 'image PXL_20230625_101012788.jpg',594.7229915687432,513.2233138197478)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="610.0816914944292" cy="515.0464283491083" onclick="show_image(&quot;PXL_20230625_101558638.jpg&quot;, 400, 400, 'image PXL_20230625_101558638.jpg',610.2613254117143,514.9801332752405)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="595.9804289895397" cy="518.2948869655648" onclick="show_image(&quot;PXL_20230625_103518606.jpg&quot;, 400, 400, 'image PXL_20230625_103518606.jpg',596.0028832292203,518.3280345023809)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="588.1663535887528" cy="677.6019493055401" onclick="show_image(&quot;PXL_20230625_105536484.jpg&quot;, 400, 400, 'image PXL_20230625_105536484.jpg',588.1663535887528,677.6019493055401)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="563.3319645275519" cy="1414.073924145323" onclick="show_image(&quot;PXL_20230625_125055838.jpg&quot;, 400, 400, 'image PXL_20230625_125055838.jpg',563.3319645275519,1414.073924145323)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="719.9278318989776" cy="1540.1008594380885" onclick="show_image(&quot;PXL_20230625_140426969.jpg&quot;, 400, 400, 'image PXL_20230625_140426969.jpg',628,1540.233449585824)" r="5" stroke="rgb(10%,10%,10%)" /></svg>
+    svg.append(svgimg);
+    window._shownImages.add(src);
+  }
+  ]]></script><script><![CDATA[
+      function init(){
+        window._shownImages = new Set();
+      }
+      init();
+      ]]></script><circle cx="230.47031584468982" cy="1074.5768512175307" onclick="show_image(&quot;20230625_140500.jpg&quot;, 400, 400, 'image 20230625_140500.jpg',230.44786160504913,1074.5437036807145)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="593.2410117513002" cy="515.9745593823143" onclick="show_image(&quot;PXL_20230625_100758531.jpg&quot;, 400, 400, 'image PXL_20230625_100758531.jpg',593.7574592634352,515.8751167716305)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="594.857717006707" cy="513.7205268731669" onclick="show_image(&quot;PXL_20230625_101012788.jpg&quot;, 400, 400, 'image PXL_20230625_101012788.jpg',594.7229915687432,513.2233138197478)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="610.0816914944292" cy="515.0464283491083" onclick="show_image(&quot;PXL_20230625_101558638.jpg&quot;, 400, 400, 'image PXL_20230625_101558638.jpg',610.2613254117143,514.9801332752405)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="595.9804289895397" cy="518.2948869655648" onclick="show_image(&quot;PXL_20230625_103518606.jpg&quot;, 400, 400, 'image PXL_20230625_103518606.jpg',596.0028832292203,518.3280345023809)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="588.1663535887528" cy="677.6019493055401" onclick="show_image(&quot;PXL_20230625_105536484.jpg&quot;, 400, 400, 'image PXL_20230625_105536484.jpg',588.1663535887528,677.6019493055401)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="563.3319645275519" cy="1414.073924145323" onclick="show_image(&quot;PXL_20230625_125055838.jpg&quot;, 400, 400, 'image PXL_20230625_125055838.jpg',563.3319645275519,1414.073924145323)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="719.9278318989776" cy="1540.1008594380885" onclick="show_image(&quot;PXL_20230625_140426969.jpg&quot;, 400, 400, 'image PXL_20230625_140426969.jpg',628,1540.233449585824)" r="5" stroke="rgb(10%,10%,10%)" /></svg>

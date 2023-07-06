@@ -3,16 +3,29 @@
   // shows an image from source
   function show_image(src, width, height, alt, x, y) 
   {
+    if (window._shownImages.has(src)){
+      console.log(src  + " alread open");
+      return;
+    }
     var svg = document.getElementsByTagName("svg")[0];
     var svgimg = document.createElementNS("http://www.w3.org/2000/svg","image"); 
     svgimg.setAttributeNS(null,"height",height); 
     svgimg.onclick=function(){
       svg.getElementById(src).remove(svgimg)
+      window._shownImages.delete(src)
+      console.log("closing " + src);
     }; 
     svgimg.setAttributeNS(null,"id",src), svgimg.setAttributeNS(null,"width",width);
     svgimg.setAttributeNS("http://www.w3.org/1999/xlink","href", src);
     svgimg.setAttributeNS(null,"x",x);
     svgimg.setAttributeNS(null,"y",y);
     svgimg.setAttributeNS(null, "visibility", "visible");
-    svg.append(svgimg);}
-  ]]></script><circle cx="976.7401062732928" cy="455.1771541525437" onclick="show_image(&quot;PXL_20230626_064634681.jpg&quot;, 400, 400, 'image PXL_20230626_064634681.jpg',951,455.440414507834)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="970.0256430591996" cy="470.3409506123275" onclick="show_image(&quot;PXL_20230626_065623388.jpg&quot;, 400, 400, 'image PXL_20230626_065623388.jpg',951,470.3409506123275)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="478.97694768285766" cy="1040.194315492968" onclick="show_image(&quot;PXL_20230626_110941722.jpg&quot;, 400, 400, 'image PXL_20230626_110941722.jpg',479.1376662172445,1040.325945670613)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="476.3340206730611" cy="1056.8850220132108" onclick="show_image(&quot;PXL_20230626_111133647.jpg&quot;, 400, 400, 'image PXL_20230626_111133647.jpg',476.3340206730611,1056.8850220132108)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="340.6518624262787" cy="1206.4169037705965" onclick="show_image(&quot;PXL_20230626_113143354.jpg&quot;, 400, 400, 'image PXL_20230626_113143354.jpg',339.0803923123413,1206.6275120547912)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="1100.3148015967554" cy="822.3200455239904" onclick="show_image(&quot;PXL_20230626_132838336.jpg&quot;, 400, 400, 'image PXL_20230626_132838336.jpg',951,820.661505286073)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="1103.172019985692" cy="815.369972146496" onclick="show_image(&quot;PXL_20230626_132855788.jpg&quot;, 400, 400, 'image PXL_20230626_132855788.jpg',951,814.7644733295527)" r="5" stroke="rgb(10%,10%,10%)" /></svg>
+    svg.append(svgimg);
+    window._shownImages.add(src);
+  }
+  ]]></script><script><![CDATA[
+      function init(){
+        window._shownImages = new Set();
+      }
+      init();
+      ]]></script><circle cx="976.7401062732928" cy="455.1771541525437" onclick="show_image(&quot;PXL_20230626_064634681.jpg&quot;, 400, 400, 'image PXL_20230626_064634681.jpg',951,455.440414507834)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="970.0256430591996" cy="470.3409506123275" onclick="show_image(&quot;PXL_20230626_065623388.jpg&quot;, 400, 400, 'image PXL_20230626_065623388.jpg',951,470.3409506123275)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="478.97694768285766" cy="1040.194315492968" onclick="show_image(&quot;PXL_20230626_110941722.jpg&quot;, 400, 400, 'image PXL_20230626_110941722.jpg',479.1376662172445,1040.325945670613)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="476.3340206730611" cy="1056.8850220132108" onclick="show_image(&quot;PXL_20230626_111133647.jpg&quot;, 400, 400, 'image PXL_20230626_111133647.jpg',476.3340206730611,1056.8850220132108)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="340.6518624262787" cy="1206.4169037705965" onclick="show_image(&quot;PXL_20230626_113143354.jpg&quot;, 400, 400, 'image PXL_20230626_113143354.jpg',339.0803923123413,1206.6275120547912)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="1100.3148015967554" cy="822.3200455239904" onclick="show_image(&quot;PXL_20230626_132838336.jpg&quot;, 400, 400, 'image PXL_20230626_132838336.jpg',951,820.661505286073)" r="5" stroke="rgb(10%,10%,10%)" /><circle cx="1103.172019985692" cy="815.369972146496" onclick="show_image(&quot;PXL_20230626_132855788.jpg&quot;, 400, 400, 'image PXL_20230626_132855788.jpg',951,814.7644733295527)" r="5" stroke="rgb(10%,10%,10%)" /></svg>

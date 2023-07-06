@@ -156,20 +156,35 @@ class MapCreator:
   // shows an image from source
   function show_image(src, width, height, alt, x, y) 
   {
+    if (window._shownImages.has(src)){
+      console.log(src  + " alread open");
+      return;
+    }
     var svg = document.getElementsByTagName("svg")[0];
     var svgimg = document.createElementNS("http://www.w3.org/2000/svg","image"); 
     svgimg.setAttributeNS(null,"height",height); 
     svgimg.onclick=function(){
       svg.getElementById(src).remove(svgimg)
+      window._shownImages.delete(src)
+      console.log("closing " + src);
     }; 
     svgimg.setAttributeNS(null,"id",src), svgimg.setAttributeNS(null,"width",width);
     svgimg.setAttributeNS("http://www.w3.org/1999/xlink","href", src);
     svgimg.setAttributeNS(null,"x",x);
     svgimg.setAttributeNS(null,"y",y);
     svgimg.setAttributeNS(null, "visibility", "visible");
-    svg.append(svgimg);}
+    svg.append(svgimg);
+    window._shownImages.add(src);
+  }
   """  
     dwg.add(svgwrite.container.Script(content=contentscript))
+    initscript = """
+      function init(){
+        window._shownImages = new Set();
+      }
+      init();
+      """  
+    dwg.add(svgwrite.container.Script(content=initscript))
     try:
       for root, dirs, files in os.walk(imageFolder):
         for f in files:
