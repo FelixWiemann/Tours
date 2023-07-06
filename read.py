@@ -146,7 +146,7 @@ class MapCreator:
     # build url for streetmap
     return "https://render.openstreetmap.org/cgi-bin/export?bbox={botleftlong:.15f},{botleftlat:.15f},{toprightlong:.15f},{toprightlat:.15f}&scale={scale}&format=svg ".format(botleftlong=minlong, botleftlat=minlat, toprightlong=maxlong, toprightlat=maxlat, scale=round(scale))
 
-  def createImageMap(self, map, pnts, segments, imageFolder, out):
+  def createImageMap(self, map, pnts:List[trkpnt], segments:List[Segment], imageFolder, out):
     print("creating picture map")
     print("shrinking images: ", self.shrink)
     dwg = svgwrite.Drawing(os.path.join(out,'picture.svg'),  viewBox=('0 0 {y} {x}'.format(x=self.size[0], y=self.size[1])))
@@ -199,7 +199,7 @@ class MapCreator:
       print(ex)
     dwg.save()
 
-  def createEleMap(self, map, pnts, segments, out):
+  def createEleMap(self, map, pnts:List[trkpnt], segments:List[Segment], out):
     print("creating elevation map")
     dwg = svgwrite.Drawing(os.path.join(out,'elevation.svg'), viewBox=('0 0 {y} {x}'.format(x=self.size[0], y=self.size[1])))
     minele = 100000
@@ -210,16 +210,21 @@ class MapCreator:
         maxele = max(maxele,segment.avele)
     for segment in segments:
       # TODO more complex color scheme? -> new func getColorFor
-      dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb( min(255,(segment.avele-minele)*255/(maxele-minele)),max(255-(segment.avele-minele)*255/(maxele-minele),0), 0, '%')))
+      dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=self.getColorForElevation(segment.avele, minele, maxele)))
     i =0
     for x in range(int(minele), int(maxele), int((maxele-minele)/5)):
       # TODO use getColorFor
-      dwg.add(dwg.line((5,10+i*20),(20,10+i*20),stroke_width="3",stroke=svgwrite.rgb( min(255,(x-minele)*255/(maxele-minele)),max(255-(x-minele)*255/(maxele-minele),0), 0, '%')))
+      dwg.add(dwg.line((5,10+i*20),(20,10+i*20),stroke_width="3",stroke=self.getColorForElevation(x, minele, maxele)))
       dwg.add(dwg.text(f"{x} m",insert=(25, 14+i*20)))
       i=i+1
     dwg.save()
+  
+  def getColorForElevation(self, ele, minele, maxele):
+    # TODO more complex color scheme?
+    return svgwrite.rgb(min(255,(ele-minele)*255/(maxele-minele)),max(255-(ele-minele)*255/(maxele-minele),0), 0, '%')
 
-  def createSpeedMap(self, map, pnts, segments, out):
+
+  def createSpeedMap(self, map, pnts:List[trkpnt], segments:List[Segment], out):
     print("creating speed map")
     dwg = svgwrite.Drawing(os.path.join(out,'speed.svg'), viewBox=('0 0 {y} {x}'.format(x=self.size[0], y=self.size[1])))
     minspeed = 100000
@@ -229,15 +234,17 @@ class MapCreator:
         minspeed = min(minspeed,segment.speed)
         maxspeed = max(maxspeed,segment.speed)
     for segment in segments:
-      # TODO more complex color scheme? -> new func getColorFor
-      dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb( max(255-segment.speed*255/(maxspeed-minspeed),0),min(255,segment.speed*255/(maxspeed-minspeed)), 0, '%')))
+      dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=self.getColorForSpeed(segment.speed, minspeed, maxspeed)))
     i=0
     for x in range(int(minspeed), int(maxspeed), int((maxspeed-minspeed)/5)):
-      # TODO use getColorFor
-      dwg.add(dwg.line((5,10+i*20),(20,10+i*20),stroke_width="3",stroke=svgwrite.rgb( max(255-x*255/(maxspeed-minspeed),0),min(255,x*255/(maxspeed-minspeed)), 0, '%')))
+      dwg.add(dwg.line((5,10+i*20),(20,10+i*20),stroke_width="3",stroke=self.getColorForSpeed(x, minspeed, maxspeed)))
       dwg.add(dwg.text(f"{x} cm/s",insert=(25, 14+i*20)))
       i=i+1
     dwg.save()
+
+  def getColorForSpeed(self, speed, minspeed, maxspeed):
+    # TODO more complex color scheme?
+    return svgwrite.rgb(max(255-speed*255/(maxspeed-minspeed),0),min(255,speed*255/(maxspeed-minspeed)), 0, '%')
 
   def createlegMap(self, map, pnts:List[trkpnt], segments:List[Segment], out):
     print("creating leg map")
@@ -258,7 +265,6 @@ class MapCreator:
     dwg.save()   
     
   def createMaps(self, gpxData, imageFolder, out, cfg:Config):
-
     pnts, trps = self.parsetrkpoints(gpxData)
     url = self.getMapLink(trps)
     targetMap = os.path.join(out, "map.svg")
