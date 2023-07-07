@@ -16,6 +16,8 @@ class Config:
     self.Margin = margin
     ## whether to shrink images
     self.Shrink = shrink
+    ## original creation Date
+    self.creationDate = datetime.today().strftime('%Y-%m-%d')
 
 ##
 # track point class representing a track point of the gpx data
@@ -143,6 +145,7 @@ class MapCreator:
     # update for selfscaling of trackpoints
     self.botright=[minlat, maxlong]
     self.topleft=[maxlat, minlong]
+    self.mapCenter=f"{(minlat+maxlat)/2}/{(minlong+maxlong)/2}"
     # build url for streetmap
     return "https://render.openstreetmap.org/cgi-bin/export?bbox={botleftlong:.15f},{botleftlat:.15f},{toprightlong:.15f},{toprightlat:.15f}&scale={scale}&format=svg ".format(botleftlong=minlong, botleftlat=minlat, toprightlong=maxlong, toprightlat=maxlat, scale=round(scale))
 
@@ -153,6 +156,7 @@ class MapCreator:
     dwg = svgwrite.Drawing(os.path.join(out,'picture.svg'),  viewBox=('0 0 {y} {x}'.format(x=self.size[0], y=self.size[1])))
     for segment in segments: 
       dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb(10, 10, 10, '%')))
+      # TODO opening/closing images does strange things on chrome/edge
       contentscript = """
   // shows an image from source
   function show_image(src, width, height, alt, x, y) 
@@ -295,7 +299,9 @@ class MapCreator:
         maxele = max(maxele,segment.avele)
     for segment in segments:
       dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=self.getColorForElevation(segment.avele, minele, maxele)))
+    # TODO add mouse over event on track (show height)
     i =0
+    # TODO legend as mouse over to not block map & have light grey background?
     for x in range(int(minele), int(maxele), int((maxele-minele)/5)):
       dwg.add(dwg.line((5,10+i*20),(20,10+i*20),stroke_width="3",stroke=self.getColorForElevation(x, minele, maxele)))
       dwg.add(dwg.text(f"{x} m",insert=(25, 14+i*20)))
@@ -318,7 +324,9 @@ class MapCreator:
         maxspeed = max(maxspeed,segment.speed)
     for segment in segments:
       dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=self.getColorForSpeed(segment.speed, minspeed, maxspeed)))
+      # TODO add mouse over event on track (show speed)
     i=0
+    # TODO legend as mouse over to not block map & have light grey background?
     for x in range(int(minspeed), int(maxspeed), int((maxspeed-minspeed)/5)):
       dwg.add(dwg.line((5,10+i*20),(20,10+i*20),stroke_width="3",stroke=self.getColorForSpeed(x, minspeed, maxspeed)))
       dwg.add(dwg.text(f"{x/100} m/s",insert=(25, 14+i*20)))
@@ -342,6 +350,8 @@ class MapCreator:
         if not segment.target.date in legdates:
           legdates.append(segment.target.date)
       dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=svgwrite.rgb(legcolor[legcount%6][0],legcolor[legcount%6][1],legcolor[legcount%6][2] , '%')))
+    
+    # TODO legend as mouse over to not block map & have light grey background?
     for i in range (0, legcount+1):
       dwg.add(dwg.line((5,10+i*20),(20,10+i*20),stroke_width="3",stroke=svgwrite.rgb(legcolor[i%6][0],legcolor[i%6][1],legcolor[i%6][2] , '%')))
       dwg.add(dwg.text(f"{legdates[i]}",insert=(25, 14+i*20)))
@@ -362,6 +372,7 @@ class MapCreator:
         os.makedirs(out)
       shutil.copyfile("map.svg", targetMap)
       shutil.copyfile(gpxData, os.path.join(out, os.path.basename(gpxData)))
+      cfg.creationDate=datetime.today().strftime('%Y-%m-%d')
       with open(os.path.join(out, "cfg.json"),"w") as f:
           f.write(json.dumps(cfg.__dict__))
     tree = ET.parse(targetMap)
@@ -376,17 +387,20 @@ class MapCreator:
     for i in range (0, len(trps)-1):
       segments.append(Segment(trps[i],trps[i+1]))
   
-    self.createPage(out)
+    self.createPage(out, cfg)
     self.createImageMap(map, pnts, segments, imageFolder, out)
     self.createEleMap(map, pnts, segments, out)
     self.createSpeedMap(map, pnts, segments, out)
     self.createlegMap(map, pnts, segments, out)
 
-  def createPage(self, out):
+  def createPage(self, out, cfg:Config):
     lines = open("template.html","r").readlines()
     newLines = []
     for line in lines:
       line = line.replace("{{TOURTITLE}}",self.tourname)
+      line = line.replace("{{MAP_DATE}}",cfg.creationDate)
+      line = line.replace("{{CREATION_DATE}}",datetime.today().strftime('%Y-%m-%d'))
+      line = line.replace("{{COORDINATES}}",self.mapCenter)
       newLines.append(line)
     open(os.path.join(out,"index.html"),"w").writelines(newLines)
 
@@ -447,7 +461,7 @@ def recreateExistingProjects(toursDir):
         with open(cfgFile, "r") as f:
           s = f.read()
           # override saved config
-          cfg.__dict__ = json.loads(s)
+          cfg.__dict__ = cfg.__dict__ | json.loads(s)
         mc.main(gpxFile, projDir, projDir, cfg, recreate=True)
 
 if __name__=="__main__":
