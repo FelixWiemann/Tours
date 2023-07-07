@@ -42,14 +42,14 @@ class trkpnt:
     return True
   
   def __repr__(self):
-    return "[{lat}, {lon}, {ele}: {time}]".format(lat=self.scaledlat, lon=self.scaledlon, ele =self.ele, time = self.timestamp)
+    return "[{lat}, {lon}, {ele}: {time}]".format(lat=self.scaledlat, lon=self.scaledlon, ele=self.ele, time=self.timestamp)
   
 ##
 # waypoint class represening a waypoint of the gpx data  
 class wypnt(trkpnt):
   def __init__(self, lat, lon, ele, time, desc):
     super().__init__(lat, lon, ele, time)
-    self.desc =desc
+    self.desc=desc
     
   def __repr__(self):
     return self.desc + "-" + super().__repr__()
@@ -109,7 +109,7 @@ class MapCreator:
 
   ##
   # get a segment from the list of segments based on the timestamp  
-  def getSegment(self, segments, timestamp):
+  def getSegment(self, segments:List[Segment], timestamp):
     # TODO segments are sorted by time -> binary search? 
     if (timestamp==None):
       return None
@@ -205,7 +205,7 @@ class MapCreator:
     self.addBufferedImageCircles(dwg)
     dwg.save()
 
-  def addImageCircleToBuffer(self, dwg, segment:Segment, f:str):
+  def addImageCircleToBuffer(self, dwg:svgwrite.Drawing, segment:Segment, f:str):
     center=((segment.orig.scaledlon+segment.target.scaledlon)/2,(segment.orig.scaledlat+segment.target.scaledlat)/2)
     # store the segment, file and center info
     self.buffer.append([segment, f, center, center])
