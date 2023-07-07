@@ -207,7 +207,9 @@ class MapCreator:
 
   def addImageCircleToBuffer(self, dwg, segment:Segment, f:str):
     center=((segment.orig.scaledlon+segment.target.scaledlon)/2,(segment.orig.scaledlat+segment.target.scaledlat)/2)
+    # store the segment, file and center info
     self.buffer.append([segment, f, center, center])
+    # add a circle to the original position
     dwg.add(svgwrite.shapes.Circle(
         center=center,
         fill="red",   
@@ -215,38 +217,60 @@ class MapCreator:
     
   def addBufferedImageCircles(self, dwg:svgwrite.Drawing):
     collissionFree = False
+    # radius of image circle
     R=5
+    # max loop counter
     counter = 0
+    # factor to move circles away from each other
+    movefac=10
+    # distance between circles to consider them overlapping
+    overlapdist = 8
+    # while there are collissions
     while not collissionFree:
       centers=[]
       collissionFree=True
+      # all image circles
       for idx, buf in enumerate(self.buffer):
         segment, f, center, orig = buf
         cnt=0
         for c, id,i  in centers:
-          # distance between points
+          # calc distance between points
           d = math.sqrt(((c[0]-center[0])**2+(c[1]-center[1])**2))
-          if d<=7 and d>0:
-            x = center[0]-(c[0]-center[0])/d*10
-            y = center[1]-(c[1]-center[1])/d*10
+          # if overlapping and distance > 0 (otherwise div0)
+          if d<=overlapdist and d>0:
+            # calc new x, y
+            x = center[0]-(c[0]-center[0])/d*movefac
+            y = center[1]-(c[1]-center[1])/d*movefac
+            # limits for image size
+            x = min(max(x,overlapdist),self.size[1]-overlapdist)
+            y = min(max(y,overlapdist),self.size[0]-overlapdist)
+            # update in buffer
             self.buffer[idx][2]=(x, y)
-            x = c[0]+(c[0]-center[0])/d*10
-            y = c[1]+(c[1]-center[1])/d*10
+            # also move already checked circle
+            x = c[0]+(c[0]-center[0])/d*movefac
+            y = c[1]+(c[1]-center[1])/d*movefac
+            x = min(max(x,overlapdist),self.size[1]-overlapdist)
+            y = min(max(y,overlapdist),self.size[0]-overlapdist)
+            # and update
             self.buffer[id][2]=(x, y)
             centers[i][0]=(x,y)
+            # we had a collission
             collissionFree=False
         centers.append([center, idx, cnt])
         cnt =cnt +1
       counter = counter +1
+      # max 100 loops
       if counter > 100:
         collissionFree = True
-
+    # finally add all buffered and moved circles
     for idx, buf in enumerate(self.buffer):
       segment, f, center, orig = buf
-      dwg.add(dwg.line((orig[0],orig[1]),(center[0],center[1]),stroke_width="1",stroke=svgwrite.rgb(10, 10, 10, '%')))
+      # add a line to the original center
+      dwg.add(dwg.line((orig[0],orig[1]),(center[0],center[1]),stroke_width="1",stroke=svgwrite.rgb(10, 10, 255, '%')))
       dwg.add(svgwrite.shapes.Circle(
           center=center,
-          r=R,stroke=svgwrite.rgb(10,10,10,"%"),            
+          r=R,stroke=svgwrite.rgb(10,10,255,"%"),  
+          fill=svgwrite.rgb(10,255,255,"%"),             
           onclick=self.getShowImageCall(f, segment)))
 
 
@@ -270,11 +294,9 @@ class MapCreator:
         minele = min(minele,segment.avele)
         maxele = max(maxele,segment.avele)
     for segment in segments:
-      # TODO more complex color scheme? -> new func getColorFor
       dwg.add(dwg.line((segment.orig.scaledlon,segment.orig.scaledlat),(segment.target.scaledlon,segment.target.scaledlat),stroke_width="2",stroke=self.getColorForElevation(segment.avele, minele, maxele)))
     i =0
     for x in range(int(minele), int(maxele), int((maxele-minele)/5)):
-      # TODO use getColorFor
       dwg.add(dwg.line((5,10+i*20),(20,10+i*20),stroke_width="3",stroke=self.getColorForElevation(x, minele, maxele)))
       dwg.add(dwg.text(f"{x} m",insert=(25, 14+i*20)))
       i=i+1
