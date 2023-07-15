@@ -494,6 +494,8 @@ if __name__=="__main__":
     out = args.out
     mc = MapCreator()
     mc.main(args, args.gpxFile, args.imageFolder, out, cfg)
-  else:
+  elif args.recreateProjectsFrom is not None:
     recreateExistingProjects(args, args.recreateProjectsFrom)
+  else:
+    parser.print_usage()
   
