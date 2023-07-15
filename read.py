@@ -357,7 +357,7 @@ class MapCreator:
       dwg.add(dwg.text(f"{legdates[i]}",insert=(25, 14+i*20)))
     dwg.save()   
     
-  def createMaps(self, gpxData, imageFolder, out, cfg:Config):
+  def createMaps(self, args,  gpxData, imageFolder, out, cfg:Config):
     pnts, trps = self.parsetrkpoints(gpxData)
     url = self.getMapLink(trps)
     targetMap = os.path.join(out, "map.svg")
@@ -387,22 +387,33 @@ class MapCreator:
     for i in range (0, len(trps)-1):
       segments.append(Segment(trps[i],trps[i+1]))
   
-    self.createPage(out, cfg)
+    self.createPage(args, out, cfg)
     self.createImageMap(map, pnts, segments, imageFolder, out)
     self.createEleMap(map, pnts, segments, out)
     self.createSpeedMap(map, pnts, segments, out)
     self.createlegMap(map, pnts, segments, out)
 
-  def createPage(self, out, cfg:Config):
-    lines = open("template.html","r").readlines()
-    newLines = []
-    for line in lines:
-      line = line.replace("{{TOURTITLE}}",self.tourname)
-      line = line.replace("{{MAP_DATE}}",cfg.creationDate)
-      line = line.replace("{{CREATION_DATE}}",datetime.today().strftime('%Y-%m-%d'))
-      line = line.replace("{{COORDINATES}}",self.mapCenter)
-      newLines.append(line)
-    open(os.path.join(out,"index.html"),"w").writelines(newLines)
+  def createPage(self, args, out, cfg:Config):
+    if not args.createJekyllMd:
+      lines = open("template.html","r", encoding="utf-8").readlines()
+      newLines = []
+      for line in lines:
+        line = line.replace("{{TOURTITLE}}",self.tourname)
+        line = line.replace("{{MAP_DATE}}",cfg.creationDate)
+        line = line.replace("{{CREATION_DATE}}",datetime.today().strftime('%Y-%m-%d'))
+        line = line.replace("{{COORDINATES}}",self.mapCenter)
+        newLines.append(line)
+      open(os.path.join(out,"index.html"),"w", encoding="utf-8").writelines(newLines)
+    else :
+      lines = open("jekyll_template.md","r", encoding="utf-8").readlines()
+      newLines = []
+      for line in lines:
+        line = line.replace("{{TOURTITLE}}",self.tourname)
+        line = line.replace("{{MAP_DATE}}",cfg.creationDate)
+        line = line.replace("{{CREATION_DATE}}",datetime.today().strftime('%Y-%m-%d'))
+        line = line.replace("{{COORDINATES}}",self.mapCenter)
+        newLines.append(line.encode())
+      open(os.path.join(out,"index.md"),"bw").writelines(newLines)
 
 
   # get the timestamp of the filename  
@@ -432,16 +443,16 @@ class MapCreator:
     except:
       print ("could not match date of image name:", name)
 
-  def main(self, gpxFile, imageFolder, out, cfg:Config, recreate=False):
+  def main(self, args, gpxFile, imageFolder, out, cfg:Config, recreate=False):
     self.tourname = self.getTrackName(gpxFile)
     if out is None:
       out = "./tours/" + self.tourname
     self.margin = cfg.Margin
     self.shrink = cfg.Shrink
     self.recreate = recreate
-    self.createMaps(gpxFile, imageFolder, out, cfg)
+    self.createMaps(args, gpxFile, imageFolder, out, cfg)
 
-def recreateExistingProjects(toursDir):
+def recreateExistingProjects(args, toursDir):
   for root, dirs, _ in os.walk(toursDir):
     if root == toursDir:
       for dir in dirs:
@@ -462,7 +473,7 @@ def recreateExistingProjects(toursDir):
           s = f.read()
           # override saved config
           cfg.__dict__ = cfg.__dict__ | json.loads(s)
-        mc.main(gpxFile, projDir, projDir, cfg, recreate=True)
+        mc.main(args, gpxFile, projDir, os.path.join(args.out, dir), cfg, recreate=True)
 
 if __name__=="__main__":
   parser = argparse.ArgumentParser(prog="GpxAnalyzer", description="""analyses gpx data and gives a pretty output
@@ -475,12 +486,14 @@ if __name__=="__main__":
   parser.add_argument("--margin", help="margin to the side of the map from the track [° of latitude/longitude]", default=0.005, type=float)
   parser.add_argument("--shrinkImages", help="shrink the images to use PILs thumbnails instead", action='store_true')
   parser.add_argument("--out", help="output destination, everything will be copied there")
+  parser.add_argument("--createJekyllMd", help="create a jekyll compatible md file instead of an index.html", action='store_true')
+  parser.add_argument("--recreateProjectsFrom", help="recreate projects from this location")
   args = parser.parse_args()
   if args.gpxFile is not None:
     cfg = Config(args.margin, args.shrinkImages)
     out = args.out
     mc = MapCreator()
-    mc.main(args.gpxFile, args.imageFolder, out, cfg)
+    mc.main(args, args.gpxFile, args.imageFolder, out, cfg)
   else:
-    recreateExistingProjects("./tours")
+    recreateExistingProjects(args, args.recreateProjectsFrom)
   
