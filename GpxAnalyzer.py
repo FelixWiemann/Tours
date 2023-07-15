@@ -475,27 +475,51 @@ def recreateExistingProjects(args, toursDir):
           cfg.__dict__ = cfg.__dict__ | json.loads(s)
         mc.main(args, gpxFile, projDir, os.path.join(args.out, dir), cfg, recreate=True)
 
+def printHelp(parser):
+    # print main help
+  print(parser.format_help())
+
+  # retrieve subparsers from parser
+  subparsers_actions = [
+      action for action in parser._actions 
+      if isinstance(action, argparse._SubParsersAction)]
+  # there will probably only be one subparser_action,
+  # but better safe than sorry
+  for subparsers_action in subparsers_actions:
+      # get all subparsers and print help
+      for choice, subparser in subparsers_action.choices.items():
+          print("Subparser '{}'".format(choice))
+          print(subparser.format_help())
+
+
 if __name__=="__main__":
   parser = argparse.ArgumentParser(prog="GpxAnalyzer", description="""analyses gpx data and gives a pretty output
   it will generate several map files, e.g.\r
   legs.svg for the legs that are detected in the gpx file\r
   picture.svg for an interactive map with the pictures taken on the trip\r
   elevation.svg for a display of elevation""", epilog="", formatter_class=RawTextHelpFormatter)  
-  parser.add_argument("--gpxFile", help="gpx file to analyze, if provided requies image folder parameter; if not provided will regenerate existing tracks")
-  parser.add_argument("--imageFolder", help="folder of the images to include into the map file")
-  parser.add_argument("--margin", help="margin to the side of the map from the track [° of latitude/longitude]", default=0.005, type=float)
-  parser.add_argument("--shrinkImages", help="shrink the images to use PILs thumbnails instead", action='store_true')
+  sp = parser.add_subparsers(dest="type")
+  parser_new = sp.add_parser("new",  help="create a new tracks")
+  parser_recreate = sp.add_parser("recreate", help="recreate existing tracks")
+
+  parser_new.add_argument("gpxFile", help="gpx file to analyze, if provided requies image folder parameter")
+  parser_new.add_argument("imageFolder", help="folder of the images to include into the map file")
+  parser_new.add_argument("--margin", help="margin to the side of the map from the track [° of latitude/longitude]", default=0.005, type=float)
+  parser_new.add_argument("--shrinkImages", help="shrink the images to use PILs thumbnails instead", action='store_true')
+  parser_recreate.add_argument("recreateProjectsFrom", help="recreate projects from this location")
   parser.add_argument("--out", help="output destination, everything will be copied there")
   parser.add_argument("--createJekyllMd", help="create a jekyll compatible md file instead of an index.html", action='store_true')
-  parser.add_argument("--recreateProjectsFrom", help="recreate projects from this location")
   args = parser.parse_args()
-  if args.gpxFile is not None:
+  if args.type == None:
+    printHelp(parser)
+    exit(0)
+  if args.type == "new":
     cfg = Config(args.margin, args.shrinkImages)
     out = args.out
     mc = MapCreator()
     mc.main(args, args.gpxFile, args.imageFolder, out, cfg)
-  elif args.recreateProjectsFrom is not None:
+  elif args.type == "recreate":
     recreateExistingProjects(args, args.recreateProjectsFrom)
   else:
-    parser.print_usage()
+    printHelp(parser)
   
