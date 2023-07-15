@@ -2,7 +2,7 @@ python script to analyze gpx data.
 
 usage:
 
-´´´
+```
 usage: GpxAnalyzer [-h] [--out OUT] [--createJekyllMd] {new,recreate} ...
 
 analyses gpx data and gives a pretty output
@@ -41,4 +41,4 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-´´´
+```
