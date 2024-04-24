@@ -435,6 +435,14 @@ class MapCreator:
     except :
       pass
     try:
+      return datetime.strptime(name,'PXL_%Y%m%d_%H%M%S%f.LONG_EXPOSURE-01.COVER.jpg')+timedelta(hours=2, minutes=0)
+    except :
+      pass
+    try:
+      return datetime.strptime(name,'PXL_%Y%m%d_%H%M%S%f.RAW-01.COVER.jpg')+timedelta(hours=2, minutes=0)
+    except :
+      pass
+    try:
       return datetime.strptime(name,'PXL_%Y%m%d_%H%M%S%f.NIGHT.jpg')+timedelta(hours=2, minutes=0)
     except :
       pass
